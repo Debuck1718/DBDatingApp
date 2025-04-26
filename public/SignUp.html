@@ -1,0 +1,64 @@
+<!-- Replace the <script> section at the bottom of your HTML with this: -->
+  <script>
+    const ageInput = document.getElementById('age');
+    const parentOccupationGroup = document.getElementById('parentOccupationGroup');
+  
+    ageInput.addEventListener('input', () => {
+      if (parseInt(ageInput.value) < 22) {
+        parentOccupationGroup.classList.remove('hidden');
+      } else {
+        parentOccupationGroup.classList.add('hidden');
+      }
+    });
+  
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+  
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+      }
+  
+      const userData = {
+        firstname: document.getElementById('firstname').value.trim(),
+        surname: document.getElementById('surname').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        race: document.getElementById('race').value.trim(),
+        country: document.getElementById('country').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        employment: document.getElementById('employment').value,
+        education: document.getElementById('education').value,
+        age: parseInt(document.getElementById('age').value),
+        parentOccupation: document.getElementById('parentOccupation').value || '',
+        familyIncome: document.getElementById('familyIncome').value,
+        annualIncome: document.getElementById('annualIncome').value,
+        password
+      };
+  
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData)
+        });
+  
+        const data = await res.json();
+  
+        if (data.success) {
+          localStorage.setItem('dbUserSession', JSON.stringify({ username: userData.username }));
+          window.location.href = 'dashboard.html';
+        } else {
+          alert(data.error || 'Signup failed.');
+        }
+      } catch (err) {
+        alert('Something went wrong. Please try again.');
+        console.error(err);
+      }
+    });
+  </script>
+  
