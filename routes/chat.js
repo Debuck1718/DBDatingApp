@@ -1,4 +1,5 @@
 
+
 const express = require('express');
 const db = require('../db');
 const router = express.Router();
@@ -13,6 +14,7 @@ router.get('/:from/:to', (req, res) => {
       res.json(rows);
     }
   );
+  
 });
 
 module.exports = router;

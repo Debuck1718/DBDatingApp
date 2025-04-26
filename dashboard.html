@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DB Dating - Private Chat</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 25%;
+      background: #1f1f1f;
+      color: white;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .sidebar h2 {
+      color: crimson;
+    }
+    .user-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 1rem;
+    }
+    .user-list li {
+      padding: 0.5rem;
+      border-bottom: 1px solid #444;
+      cursor: pointer;
+    }
+    .user-list li:hover {
+      background: #333;
+    }
+    .main-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #f4f4f4;
+    }
+    .chat-header {
+      background: crimson;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.2rem;
+    }
+    .chat-box {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .chat-message {
+      margin-bottom: 1rem;
+      background: white;
+      padding: 0.8rem;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #ccc;
+      padding: 1rem;
+      background: white;
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .chat-input button {
+      background: crimson;
+      color: white;
+      padding: 10px 15px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #emojiPicker {
+      display: none;
+      margin: 0.5rem 1rem;
+    }
+    #emojiPicker span {
+      font-size: 1.5rem;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+    #typingStatus {
+      font-size: 0.9rem;
+      color: gray;
+      padding-left: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="sidebar">
+  <h2>Welcome, <span id="userWelcome"></span></h2>
+  <h3>Users</h3>
+  <ul class="user-list" id="userList"></ul>
+</div>
+<div class="main-chat">
+  <div class="chat-header" id="chatHeader">Select a user to chat</div>
+  <div class="chat-box" id="chatBox"></div>
+  <div id="typingStatus"></div>
+  <div class="chat-input">
+    <input type="text" id="messageInput" placeholder="Type your message..." oninput="showTyping()" />
+    <button onclick="toggleEmojiPicker()">😄</button>
+    <button onclick="sendMessage()">Send</button>
+  </div>
+  <div id="emojiPicker">
+    <span onclick="addEmoji('😊')">😊</span>
+    <span onclick="addEmoji('😍')">😍</span>
+    <span onclick="addEmoji('😂')">😂</span>
+    <span onclick="addEmoji('🔥')">🔥</span>
+    <span onclick="addEmoji('❤️')">❤️</span>
+    <span onclick="addEmoji('😎')">😎</span>
+  </div>
+</div>
+<script>
+  const socket = io('http://localhost:3000');
+  const user = JSON.parse(localStorage.getItem('dbUserSession'));
+  if (!user) {
+    alert('Please log in first!');
+    window.location.href = 'login.html';
+  } else {
+    document.getElementById('userWelcome').textContent = user.username;
+    socket.emit('register-user', user.username);
+  }
+
+  const users = ['Jessica', 'Michael', 'Amanda', 'Chris'];
+  let currentChat = null;
+
+  const userList = document.getElementById('userList');
+  const chatBox = document.getElementById('chatBox');
+  const input = document.getElementById('messageInput');
+  const typingStatus = document.getElementById('typingStatus');
+
+  users.forEach(name => {
+    const li = document.createElement('li');
+    li.textContent = name;
+    li.onclick = () => openChat(name);
+    userList.appendChild(li);
+  });
+
+  function openChat(name) {
+    currentChat = name;
+    document.getElementById('chatHeader').textContent = `Chatting with ${name}`;
+    fetch(`/api/chat/${user.username}/${name}`)
+      .then(res => res.json())
+      .then(messages => {
+        chatBox.innerHTML = '';
+        messages.forEach(msg => {
+          const div = document.createElement('div');
+          div.className = 'chat-message';
+          div.innerHTML = `<strong>${msg.sender}</strong>: ${msg.message}<div style="font-size: 0.75rem; color: gray; margin-top: 4px;">${msg.timestamp}</div>`;
+          chatBox.appendChild(div);
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+  }
+
+  function sendMessage() {
+    const message = input.value.trim();
+    if (message && currentChat) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      socket.emit('private-message', { from: user.username, to: currentChat, message });
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message';
+      msgDiv.innerHTML = `<strong>${user.username}</strong>: ${message}<div style="font-size: 0.75rem; color: gray; margin-top: 4px;">${time}</div>`;
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      input.value = '';
+      typingStatus.textContent = '';
+    }
+  }
+
+  socket.on('private-message', ({ from, message, time }) => {
+    if (from === currentChat) {
+      const div = document.createElement('div');
+      div.className = 'chat-message';
+      div.innerHTML = `<strong>${from}</strong>: ${message}<div style="font-size: 0.75rem; color: gray; margin-top: 4px;">${time}</div>`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } else {
+      alert(`New message from ${from}: ${message}`);
+    }
+  });
+
+  function toggleEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function addEmoji(emoji) {
+    input.value += emoji;
+    input.focus();
+  }
+
+  let typingTimeout;
+  function showTyping() {
+    if (currentChat) {
+      typingStatus.textContent = `${user.username} is typing...`;
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        typingStatus.textContent = '';
+      }, 2000);
+    }
+  }
+
+  const logoutBtn = document.createElement('button');
+  logoutBtn.textContent = 'Logout';
+  logoutBtn.style = 'margin-top: 1rem; padding: 8px; background: crimson; color: white; border: none; border-radius: 5px; cursor: pointer;';
+  logoutBtn.onclick = () => {
+    localStorage.removeItem('dbUserSession');
+    alert('Logged out successfully!');
+    window.location.href = 'login.html';
+  };
+  document.querySelector('.sidebar').appendChild(logoutBtn);
+</script>
+</body>
+</html>

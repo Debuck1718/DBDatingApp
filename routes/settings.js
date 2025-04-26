@@ -1,7 +1,9 @@
 
+
 const express = require('express');
 const db = require('../db');
 const router = express.Router();
+
 
 // Update user profile route
 router.post('/update', (req, res) => {
@@ -42,6 +44,7 @@ router.post('/update', (req, res) => {
     }
     res.json({ success: true, message: 'Profile updated successfully' });
   });
+
 });
 
 module.exports = router;

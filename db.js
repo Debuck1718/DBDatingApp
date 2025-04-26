@@ -1,4 +1,5 @@
 
+
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('data.db', (err) => {
   if (err) {
@@ -43,5 +44,6 @@ const db = new sqlite3.Database('data.db', (err) => {
     });
   }
 });
+
 
 module.exports = db;
